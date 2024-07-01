@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useEffect } from "react";
 import { Calendar, momentLocalizer, Views } from "react-big-calendar";
 import DatePicker from "react-datepicker";
 import moment from "moment";
@@ -8,84 +8,54 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
-import { handleEventDrop, handleEventResize } from "./DragAndDropHandlers";
 import "./EventCalendar.css";
+import { CalendarContext } from "./modules/context";
+import * as Services from "./modules/services";
+import { EventAgenda } from "./modules/component";
 
 const localizer = momentLocalizer(moment);
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 
 const EventCalendar = () => {
-  const [events, setEvents] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    start: new Date(),
-    end: new Date(),
-    description: "",
-    room: "SALA 1",
-    participanti: [],
-  });
+  const {
+    events,
+    setEvents,
+    showModal,
+    setShowModal,
+    selectedEvent,
+    setSelectedEvent,
+    newEvent,
+    setNewEvent,
+  } = useContext(CalendarContext);
 
   useEffect(() => {
-    moment.locale("ro");
-    moment.tz.setDefault("Europe/Bucharest");
+    console.log(events);
+  }, [events]);
 
-    const storedEvents = JSON.parse(localStorage.getItem("events"));
-    if (storedEvents) {
-      const parsedEvents = storedEvents.map((event) => ({
-        ...event,
-        start: new Date(event.start),
-        end: new Date(event.end),
-      }));
-      setEvents(parsedEvents);
-    }
-  }, []);
+  // const EventAgenda = ({ event }) => {
+  //   const participanti =
+  //     event.participanti && Array.isArray(event.participanti)
+  //       ? event.participanti.join(", ")
+  //       : "";
 
-  const handleSelectSlot = ({ start, end }) => {
-    setNewEvent({
-      title: "",
-      start: new Date(start),
-      end: new Date(end),
-      description: "",
-      room: "SALA 1",
-      participanti: [],
-    });
-    setSelectedEvent(null);
-    setShowModal(true);
-  };
+  //   return (
+  //     <div
+  //       style={{
+  //         display: "flex",
+  //         justifyContent: "space-between",
+  //         padding: "0.5rem 1rem",
+  //       }}
+  //     >
+  //       <div>
+  //         <strong>{event.title}</strong> <br />
+  //         Participanți: {participanti}
+  //       </div>
+  //       <div>{event.room}</div>
+  //     </div>
+  //   );
+  // };
 
-  const handleSelectEvent = (event) => {
-    setSelectedEvent(event);
-    setNewEvent({
-      ...event,
-      start: new Date(event.start),
-      end: new Date(event.end),
-    });
-    setShowModal(true);
-  };
-
-  const handleAddEvent = () => {
-    const updatedEvents = selectedEvent
-      ? events.map((event) =>
-          event.start === selectedEvent.start ? newEvent : event
-        )
-      : [...events, { ...newEvent, participanti: newEvent.participanti }];
-    setEvents(updatedEvents);
-    localStorage.setItem("events", JSON.stringify(updatedEvents));
-    setShowModal(false);
-  };
-
-  const handleDeleteEvent = () => {
-    const updatedEvents = events.filter(
-      (event) => event.start !== selectedEvent.start
-    );
-    setEvents(updatedEvents);
-    localStorage.setItem("events", JSON.stringify(updatedEvents));
-    setShowModal(false);
-  };
-
-  const CustomAgendaHeader = ({ label }) => (
+  const CustomAgendaHeader = () => (
     <div
       style={{
         display: "flex",
@@ -103,29 +73,6 @@ const EventCalendar = () => {
     </div>
   );
 
-  const EventAgenda = ({ event }) => {
-    const participanti =
-      event.participanti && Array.isArray(event.participanti)
-        ? event.participanti.join(", ")
-        : "";
-
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "0.5rem 1rem",
-        }}
-      >
-        <div>
-          <strong>{event.title}</strong> <br />
-          Participanți: {participanti}
-        </div>
-        <div>{event.room}</div>
-      </div>
-    );
-  };
-
   return (
     <div>
       <DragAndDropCalendar
@@ -134,10 +81,24 @@ const EventCalendar = () => {
         startAccessor="start"
         endAccessor="end"
         selectable
-        onSelectSlot={handleSelectSlot}
-        onSelectEvent={handleSelectEvent}
-        onEventDrop={handleEventDrop(events, setEvents)}
-        onEventResize={handleEventResize(events, setEvents)}
+        onSelectSlot={(e) => {
+          Services.handleSelectSlot(
+            e,
+            setNewEvent,
+            setSelectedEvent,
+            setShowModal
+          );
+        }}
+        onSelectEvent={(e) =>
+          Services.handleSelectEvent(
+            e,
+            setSelectedEvent,
+            setNewEvent,
+            setShowModal
+          )
+        }
+        onEventDrop={Services.handleEventDrop(events, setEvents)}
+        onEventResize={Services.handleEventResize(events, setEvents)}
         resizable
         draggableAccessor={() => true}
         style={{ height: 500, margin: "50px" }}
@@ -168,7 +129,7 @@ const EventCalendar = () => {
         components={{
           agenda: {
             header: CustomAgendaHeader,
-            event: EventAgenda,
+            event: (events) => <EventAgenda event={events} />,
           },
         }}
       />
@@ -232,11 +193,32 @@ const EventCalendar = () => {
               }
             />
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <button onClick={handleAddEvent}>
+              <button
+                onClick={() =>
+                  Services.handleAddEvent(
+                    events,
+                    selectedEvent,
+                    newEvent,
+                    setEvents,
+                    setShowModal
+                  )
+                }
+              >
                 {selectedEvent ? "Actualizează Eveniment" : "Adaugă Eveniment"}
               </button>
               {selectedEvent && (
-                <button onClick={handleDeleteEvent}>Șterge Eveniment</button>
+                <button
+                  onClick={() =>
+                    Services.handleDeleteEvent(
+                      events,
+                      selectedEvent,
+                      setEvents,
+                      setShowModal
+                    )
+                  }
+                >
+                  Șterge Eveniment
+                </button>
               )}
               <button onClick={() => setShowModal(false)}>Anulează</button>
             </div>
