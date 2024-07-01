@@ -129,7 +129,7 @@ const EventCalendar = () => {
         components={{
           agenda: {
             header: CustomAgendaHeader,
-            event: (events) => <EventAgenda event={events} />,
+            event: EventAgenda,
           },
         }}
       />

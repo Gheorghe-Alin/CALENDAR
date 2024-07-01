@@ -1,11 +1,11 @@
 import React from "react";
 
-const EventAgenda = ({ event = {} }) => {
+const EventAgenda = ({ event }) => {
   // Set default event object
   const participanti = Array.isArray(event.participanti)
     ? event.participanti.join(", ")
     : "";
-
+  console.log(event);
   return (
     <div
       style={{
