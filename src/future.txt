@@ -1,0 +1,5 @@
+Invitatii pentru participanti pe mail.
+Confirmare din partea participantilor.
+Status confirmare   IN ASTEPTARE/REFUZ/PREZENT
+
+
